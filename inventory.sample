@@ -1,0 +1,14 @@
+[fabric_3]
+10.66.80.242 username=mipetrin password=cisco
+
+[aci_sim]
+10.66.80.38 username=admin password=cisco
+
+[nxos]
+10.66.88.233 username=admin password=cisco vrf=management
+10.66.88.110 username=admin password=cisco vrf=management
+10.66.65.154 username=admin password=cisco vrf=default
+
+[servers]
+10.66.80.35 username=root password=cisco
+10.66.80.36 username=root password=cisco

@@ -1,0 +1,309 @@
+---
+- name: PLAY 1
+  hosts: "{{ group | default('fabric_3')}}"
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: TASK 1 - Gather Tenants
+      aci_tenant:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: query
+      tags:
+        - all_tenants # ansible-playbook -i inventory aci_plays.yml -v --tags "all_tenants"
+        # ansible-playbook [options] --check   ### Dry-run mode, check what Ansible would do without changing anything
+
+    - name: TASK 2 - Gather EPGs
+      aci_epg:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: query
+      tags:
+        - all_epgs # ansible-playbook -i inventory aci_plays.yml -v --tags "all_epgs"
+
+    - name: TASK 3 - Return Data for all EPGs in an Tenant/App Profile
+      aci_epg:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        tenant: mipetrin
+        ap: CiscoLive_18
+        epg: CiscoLive_18-mike-test-web   # Available as an option to filter for a specific EPG. NOTE: If doesn't exist, it actually creates it in the current version
+      tags:
+        - single_epg_tenant # ansible-playbook -i inventory aci_plays.yml -v --tags "single_epg_tenant"
+
+    - name: TASK 4A - Collect List of App Profiles for a tenant
+      aci_ap:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        tenant: mipetrin
+        state: query
+      register: prod_apps
+      tags:
+        - query_apps # ansible-playbook -i inventory aci_plays.yml -v --tags "query_apps"
+
+    # Assume at least 1 AP in the Tenant returned
+
+    - name: TASK 4B - Create a list of App Names using a query filter
+      set_fact:
+        apps: "{{ prod_apps | json_query('existing[0].fvTenant.children[*].fvAp.attributes.name') }}"
+        # {{ prod_apps | json_query }} matches the registered variable from above Task 4
+        # Might throw an error if you don't have "jmespath" installed / Fix via pip install "jmespath"
+      tags:
+        - query_apps # ansible-playbook -i inventory aci_plays.yml -v --tags "query_apps"
+
+    - name: TASK 4C - Print list of Apps in our Tenant
+      debug: var=apps # Matches the apps: from the above set_fact
+      tags:
+        - query_apps # ansible-playbook -i inventory aci_plays.yml -v --tags "query_apps"
+
+
+    - name: TASK 5A - Collect List of EPGs for a tenant/AP
+      aci_epg:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        tenant: mipetrin
+        ap: CiscoLive_18
+        state: query
+      register: prod_epgs
+      tags:
+        - query_epgs # ansible-playbook -i inventory aci_plays.yml -v --tags "query_epgs"
+
+    # Assume at least 1 EPG in the Tenant/AP returned
+
+    - name: TASK 5B - Create a list of App Names using a query filter
+      set_fact:
+        epgs: "{{ prod_epgs | json_query('existing[0].fvAp.children[*].fvAEPg.attributes.name') }}"
+        # {{ prod_epgs | json_query }} matches the registered variable from above Task 5
+        # Might throw an error if you don't have "jmespath" installed / Fix via: pip install "jmespath"
+      tags:
+        - query_epgs # ansible-playbook -i inventory aci_plays.yml -v --tags "query_epgs"
+
+    - name: TASK 5C - Print list of Apps in our Tenant
+      debug: var=epgs # Matches the apps: from the above set_fact
+      tags:
+        - query_epgs # ansible-playbook -i inventory aci_plays.yml -v --tags "query_epgs"
+
+
+    # Below based off Cisco DevNet with some additional tweaks
+    - name: TASK 6A - Load Variable file
+      include_vars:
+        file: ./vars/CiscoLive_Demo_App_vars.yml
+      tags:
+        - deploy_app
+
+    - name: TASK 6B - Create a new Tenant
+      aci_tenant:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        descr: "Cisco Live USA 2018 - Tenant created by Ansible"
+      tags:
+        - deploy_app
+
+    - name: TASK 6C - Create a new VRF
+      aci_vrf:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        vrf: "{{ vrf }}"
+        policy_control_preference: enforced
+        policy_control_direction: ingress
+        descr: "Cisco Live USA 2018 - VRF created by Ansible"
+      tags:
+        - deploy_app
+
+    - name: TASK 6D - Create Bridge Domain
+      aci_bd:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        bd: "{{ item.bd | default('mipetrin_bd') }}"
+        vrf: "{{ vrf }}"
+        description: "Cisco Live USA 2018 - BD created by Ansible"   ### Note description vs descr
+      with_items: "{{ bds }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6E - Configure Bridge Domain Subnet Information
+      aci_bd_subnet:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        bd: "{{ item.bd }}"
+        gateway: "{{ item.gateway }}"
+        mask: "{{ item.mask }}"
+        scope: "{{ item.scope }}"
+        descr: "Cisco Live USA 2018 - Subnet created by Ansible"
+      with_items: "{{ bds }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6F - Create the App
+      aci_ap:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        ap: "{{ ap }}"
+        descr: "Cisco Live USA 2018 - App created by Ansible"
+      tags:
+        - deploy_app
+
+    - name: TASK 6G - Create the EPGs to associate with App
+      aci_epg:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        ap: "{{ ap }}"
+        epg: "{{ item.epg }}"
+        bd: "{{ item.epg_bd }}"
+        fwd_control: proxy-arp
+        description: "Cisco Live USA 2018 - EPG created by Ansible" # Note description vs descr
+      with_items: "{{ ap_epgs }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6H - Create a Contract Filter
+      aci_filter:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        filter: "{{ item.filter }}"
+        descr: "Cisco Live USA 2018 - Filter created by Ansible"
+      with_items: "{{ filters }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6I - Create Filter Entries
+      aci_filter_entry:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        filter: "{{ item.filter }}"
+        entry: "{{ item.entry }}"
+        ether_type: "ip"
+        ip_protocol: "{{ item.protocol }}"
+        dst_port_start: "{{ item.port | default('unspecified')}}"  # Need to have a default for scenarios where port isn't required. Eg: ICMP
+        dst_port_end: "{{ item.port | default('unspecified')}}"  # Need to have a default for scenarios where port isn't required. Eg: ICMP
+        description: "Cisco Live USA 2018 - Filter Entry created by Ansible" # Note Description vs Descr
+      with_items: "{{ filters }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6J - Create a Contract
+      aci_contract:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        contract: "{{ item.contract }}"
+        scope: "context"
+        description: "Cisco Live USA 2018 - Contract created by Ansible"
+      with_items: "{{ contracts }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6K - Associate Contract with Subject   # aci_contract_subject must come BEFORE aci_contract_subject_to_filter
+      aci_contract_subject:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        contract: "{{ item.contract }}"
+        subject: "{{ item.subject }}"
+        description: "Cisco Live USA 2018 - Subject created by Ansible"   ## Note Description vs Descr
+      with_items: "{{ contracts }}"
+      tags:
+        - deploy_app
+
+
+    - name: TASK 6L - Associate Subject with Filter
+      aci_contract_subject_to_filter:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        contract: "{{ item.contract }}"
+        subject: "{{ item.subject }}"
+        filter: "{{ item.filter }}"
+      with_items: "{{ contracts }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6M - Associate Contracts with the EPG
+      aci_epg_to_contract:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: no
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        ap: "{{ ap }}"
+        epg: "{{ item.epg }}"
+        contract: "{{ item.contract }}"
+        contract_type: "{{ item.contract_type }}"
+      with_items: "{{ epg_contracts }}"
+      tags:
+        - deploy_app
+
+### ansible-playbook -i inventory aci_plays.yml -v --tags "deploy_app"
+### ansible-playbook -i inventory aci_plays.yml -v --tags "deploy_app" --extra-vars "state=absent"
+
+#    - name: TASK 6N - Associate a Domain to the EPG
+#      aci_epg_to_domain:
+#        hostname: "{{ inventory_hostname }}"
+#        username: "{{ username }}"
+#        password: "{{ password }}"
+#        validate_certs: no
+#        state: "{{ state | default('present')}}"
+#        tenant: "{{ tenant }}"
+#        ap: "{{ ap }}"
+#        epg: "{{ item.epg }}"
+#        domain: "mipetrin-101"
+#        domain_type: "vmm"
+#        vm_provider: "vmware"
+#        encap_mode: "auto"
+#        encap: "{{ item.encap }}"
+#      with_items: "{{ ap_epgs }}"
+#      tags:
+#        - deploy_app

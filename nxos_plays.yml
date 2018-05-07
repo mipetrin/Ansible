@@ -1,0 +1,61 @@
+---
+- name: PLAY 2
+  hosts: nxos
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Test reachability to a few different known IPs using mgmt vrf
+      nxos_ping:
+        dest: "{{ item }}"
+        vrf: "{{ vrf }}"
+        count: 3
+        host: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+      with_items:
+        #- 10.66.80.242
+        - 4.2.2.2
+        - 10.66.80.4
+        - "{{ extra_host }}"
+      tags:
+        - ping # ansible-playbook -i inventory nxos_plays.yml -v --tags "ping" --extra-vars "extra_host=10.66.88.1"
+
+    - name: Ensure a range of VLANs are not present on the switch
+      nxos_vlan:
+        host: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        vlan_range: "627-630"
+        state: "{{ state | default('present')}}"
+        transport: nxapi
+      tags:
+        - vlan_range
+        # ansible-playbook -i inventory nxos_plays.yml -v --tags "vlan_range" ### Default state is 'present' so will ensure existance
+        # ansible-playbook -i inventory nxos_plays.yml -v --tags "vlan_range" --extra-vars "state=absent"   ### State absent will delete
+        # NXOS check:   #show vlan bri | egrep ^6[2-3][6-9]|^630
+
+    - name: Ensure VLAN 626 exists with the name mipetrin-CLUS-18-test and is NOT shutdown
+      nxos_vlan:
+        host: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        vlan_id: 626
+        admin_state: up
+        name: mipetrin-CLUS-18-test
+        transport: nxapi
+      tags:
+        - ensure_vlan # ansible-playbook -i inventory nxos_plays.yml -v --tags "ensure_vlan"
+        # NXOS check:   #show vlan bri | egrep ^6[2-3][6-9]|^630
+
+    - name: Ensure VLAN is NOT on the device
+      nxos_vlan:
+        host: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        vlan_id: 628
+        state: absent
+        transport: nxapi
+      tags:
+        - ensure_no_vlan_single # ansible-playbook -i inventory nxos_plays.yml -v --tags "ensure_no_vlan_single"
+        # NXOS check:   #show vlan bri | egrep ^6[2-3][6-9]|^630
