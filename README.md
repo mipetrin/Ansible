@@ -1,6 +1,6 @@
 Created by Michael Petrinovic 2018
 
-Sample Ansible playbooks for Cisco Live Melbourne 2018: BRKDCN-2602
+Sample Ansible playbooks for various Cisco Live Presentations (BRKDCN-2602, BRKDCN-2011) and other events
 
 Be sure to update the inventory.sample file to include the relevant hosts in your environment. Furthermore, update the relevant username and password combinations
 
