@@ -1,5 +1,5 @@
 ---
-- name: PLAY 2
+- name: Mike's NXOS Playbook
   hosts: nxos
   connection: local
   gather_facts: no
@@ -35,14 +35,14 @@
         # ansible-playbook -i inventory nxos_plays.yml -v --tags "vlan_range" --extra-vars "state=absent"   ### State absent will delete
         # NXOS check:   #show vlan bri | egrep ^6[2-3][6-9]|^630
 
-    - name: Ensure VLAN 626 exists with the name mipetrin-CLUS-18-test and is NOT shutdown
+    - name: Ensure VLAN 626 exists with the name mipetrin-CiscoLive and is NOT shutdown
       nxos_vlan:
         host: "{{ inventory_hostname }}"
         username: "{{ username }}"
         password: "{{ password }}"
         vlan_id: 626
         admin_state: up
-        name: mipetrin-CLUS-18-test
+        name: mipetrin-CiscoLive
         transport: nxapi
       tags:
         - ensure_vlan # ansible-playbook -i inventory nxos_plays.yml -v --tags "ensure_vlan"

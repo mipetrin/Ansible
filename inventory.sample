@@ -4,10 +4,19 @@
 [aci_sim]
 10.66.80.38 username=admin password=cisco
 
-[nxos]
+[n7k]
 10.66.88.233 username=admin password=cisco vrf=management
-10.66.88.110 username=admin password=cisco vrf=management
+
+[n5k]
 10.66.65.154 username=admin password=cisco vrf=default
+
+[n3k]
+10.66.88.110 username=admin password=cisco vrf=management
+
+[nxos:children]
+n7k
+n5k
+n3k
 
 [servers]
 10.66.80.35 username=root password=cisco

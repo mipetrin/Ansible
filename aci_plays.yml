@@ -1,5 +1,5 @@
 ---
-- name: PLAY 1
+- name: Mike's ACI Playbook
   hosts: "{{ group | default('fabric_3')}}"
   connection: local
   gather_facts: no
@@ -33,8 +33,8 @@
         password: "{{ password }}"
         validate_certs: no
         tenant: mipetrin
-        ap: CiscoLive_18
-        epg: CiscoLive_18-mike-test-web   # Available as an option to filter for a specific EPG. NOTE: If doesn't exist, it actually creates it in the current version
+        ap: CiscoLive
+        epg: Barcelona   # Available as an option to filter for a specific EPG. NOTE: If doesn't exist, it actually creates it in the current version
       tags:
         - single_epg_tenant # ansible-playbook -i inventory aci_plays.yml -v --tags "single_epg_tenant"
 
@@ -73,7 +73,7 @@
         password: "{{ password }}"
         validate_certs: no
         tenant: mipetrin
-        ap: CiscoLive_18
+        ap: CiscoLive
         state: query
       register: prod_epgs
       tags:
@@ -110,7 +110,7 @@
         validate_certs: no
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
-        descr: "Cisco Live USA 2018 - Tenant created by Ansible"
+        descr: "Cisco Live - Tenant created by Ansible"
       tags:
         - deploy_app
 
@@ -125,7 +125,7 @@
         vrf: "{{ vrf }}"
         policy_control_preference: enforced
         policy_control_direction: ingress
-        descr: "Cisco Live USA 2018 - VRF created by Ansible"
+        descr: "Cisco Live - VRF created by Ansible"
       tags:
         - deploy_app
 
@@ -139,7 +139,7 @@
         tenant: "{{ tenant }}"
         bd: "{{ item.bd | default('mipetrin_bd') }}"
         vrf: "{{ vrf }}"
-        description: "Cisco Live USA 2018 - BD created by Ansible"   ### Note description vs descr
+        description: "Cisco Live - BD created by Ansible"   ### Note description vs descr
       with_items: "{{ bds }}"
       tags:
         - deploy_app
@@ -156,7 +156,7 @@
         gateway: "{{ item.gateway }}"
         mask: "{{ item.mask }}"
         scope: "{{ item.scope }}"
-        descr: "Cisco Live USA 2018 - Subnet created by Ansible"
+        descr: "Cisco Live - Subnet created by Ansible"
       with_items: "{{ bds }}"
       tags:
         - deploy_app
@@ -170,7 +170,7 @@
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         ap: "{{ ap }}"
-        descr: "Cisco Live USA 2018 - App created by Ansible"
+        descr: "Cisco Live - App created by Ansible"
       tags:
         - deploy_app
 
@@ -186,7 +186,7 @@
         epg: "{{ item.epg }}"
         bd: "{{ item.epg_bd }}"
         fwd_control: proxy-arp
-        description: "Cisco Live USA 2018 - EPG created by Ansible" # Note description vs descr
+        description: "Cisco Live - EPG created by Ansible" # Note description vs descr
       with_items: "{{ ap_epgs }}"
       tags:
         - deploy_app
@@ -200,7 +200,7 @@
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         filter: "{{ item.filter }}"
-        descr: "Cisco Live USA 2018 - Filter created by Ansible"
+        descr: "Cisco Live - Filter created by Ansible"
       with_items: "{{ filters }}"
       tags:
         - deploy_app
@@ -219,7 +219,7 @@
         ip_protocol: "{{ item.protocol }}"
         dst_port_start: "{{ item.port | default('unspecified')}}"  # Need to have a default for scenarios where port isn't required. Eg: ICMP
         dst_port_end: "{{ item.port | default('unspecified')}}"  # Need to have a default for scenarios where port isn't required. Eg: ICMP
-        description: "Cisco Live USA 2018 - Filter Entry created by Ansible" # Note Description vs Descr
+        description: "Cisco Live - Filter Entry created by Ansible" # Note Description vs Descr
       with_items: "{{ filters }}"
       tags:
         - deploy_app
@@ -234,7 +234,7 @@
         tenant: "{{ tenant }}"
         contract: "{{ item.contract }}"
         scope: "context"
-        description: "Cisco Live USA 2018 - Contract created by Ansible"
+        description: "Cisco Live - Contract created by Ansible"
       with_items: "{{ contracts }}"
       tags:
         - deploy_app
@@ -249,7 +249,7 @@
         tenant: "{{ tenant }}"
         contract: "{{ item.contract }}"
         subject: "{{ item.subject }}"
-        description: "Cisco Live USA 2018 - Subject created by Ansible"   ## Note Description vs Descr
+        description: "Cisco Live - Subject created by Ansible"   ## Note Description vs Descr
       with_items: "{{ contracts }}"
       tags:
         - deploy_app
