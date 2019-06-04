@@ -4,13 +4,17 @@
   connection: local
   gather_facts: no
 
+  vars:
+    aci_login: &aci_login
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      validate_certs: no
+
   tasks:
     - name: TASK 1 - Gather Tenants
       aci_tenant:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: query
       tags:
         - all_tenants # ansible-playbook -i inventory aci_plays.yml -v --tags "all_tenants"
@@ -18,20 +22,14 @@
 
     - name: TASK 2 - Gather EPGs
       aci_epg:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: query
       tags:
         - all_epgs # ansible-playbook -i inventory aci_plays.yml -v --tags "all_epgs"
 
     - name: TASK 3 - Return Data for all EPGs in an Tenant/App Profile
       aci_epg:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         tenant: mipetrin
         ap: CiscoLive
         epg: Barcelona   # Available as an option to filter for a specific EPG. NOTE: If doesn't exist, it actually creates it in the current version
@@ -40,10 +38,7 @@
 
     - name: TASK 4A - Collect List of App Profiles for a tenant
       aci_ap:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         tenant: mipetrin
         state: query
       register: prod_apps
@@ -68,10 +63,7 @@
 
     - name: TASK 5A - Collect List of EPGs for a tenant/AP
       aci_epg:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         tenant: mipetrin
         ap: CiscoLive
         state: query
@@ -104,10 +96,7 @@
 
     - name: TASK 6B - Create a new Tenant
       aci_tenant:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         descr: "Cisco Live - Tenant created by Ansible"
@@ -116,10 +105,7 @@
 
     - name: TASK 6C - Create a new VRF
       aci_vrf:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         vrf: "{{ vrf }}"
@@ -131,10 +117,7 @@
 
     - name: TASK 6D - Create Bridge Domain
       aci_bd:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         bd: "{{ item.bd | default('mipetrin_bd') }}"
@@ -146,10 +129,7 @@
 
     - name: TASK 6E - Configure Bridge Domain Subnet Information
       aci_bd_subnet:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         bd: "{{ item.bd }}"
@@ -163,10 +143,7 @@
 
     - name: TASK 6F - Create the App
       aci_ap:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         ap: "{{ ap }}"
@@ -176,10 +153,7 @@
 
     - name: TASK 6G - Create the EPGs to associate with App
       aci_epg:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         ap: "{{ ap }}"
@@ -193,10 +167,7 @@
 
     - name: TASK 6H - Create a Contract Filter
       aci_filter:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         filter: "{{ item.filter }}"
@@ -207,10 +178,7 @@
 
     - name: TASK 6I - Create Filter Entries
       aci_filter_entry:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         filter: "{{ item.filter }}"
@@ -226,10 +194,7 @@
 
     - name: TASK 6J - Create a Contract
       aci_contract:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         contract: "{{ item.contract }}"
@@ -241,10 +206,7 @@
 
     - name: TASK 6K - Associate Contract with Subject   # aci_contract_subject must come BEFORE aci_contract_subject_to_filter
       aci_contract_subject:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         contract: "{{ item.contract }}"
@@ -257,10 +219,7 @@
 
     - name: TASK 6L - Associate Subject with Filter
       aci_contract_subject_to_filter:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         contract: "{{ item.contract }}"
@@ -272,10 +231,7 @@
 
     - name: TASK 6M - Associate Contracts with the EPG
       aci_epg_to_contract:
-        hostname: "{{ inventory_hostname }}"
-        username: "{{ username }}"
-        password: "{{ password }}"
-        validate_certs: no
+        <<: *aci_login
         state: "{{ state | default('present')}}"
         tenant: "{{ tenant }}"
         ap: "{{ ap }}"
@@ -291,10 +247,7 @@
 
 #    - name: TASK 6N - Associate a Domain to the EPG
 #      aci_epg_to_domain:
-#        hostname: "{{ inventory_hostname }}"
-#        username: "{{ username }}"
-#        password: "{{ password }}"
-#        validate_certs: no
+#        <<: *aci_login
 #        state: "{{ state | default('present')}}"
 #        tenant: "{{ tenant }}"
 #        ap: "{{ ap }}"
