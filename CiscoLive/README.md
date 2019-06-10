@@ -1,48 +1,19 @@
 Sample Ansible Playbooks from various presentations that I do at Cisco Live and other events, including Customer Presentations/Demos, DevNet, DevNet Express Events, Internal Training that I feel the demo should be shared, etc:
 
-* Cisco Live Melbourne 2018: BRKDCN-2602
-* Cisco Live Orlando 2018: BRKDCN-2011
-* Cisco Live Barcelona 2019: BRKDCN-2011
-* Cisco Live Melbourne 2019: BRKDCN-2602
-* Cisco Live San Diego 2019: BRKDCN-2011
-
-> Within each sub-directory, is the script and an additional README. It will be documented in that README what each script is expected to achieve and how to use that particular script.
-
-> Be sure to update the inventory.sample file to include the relevant hosts in your environment. Furthermore, update the relevant username and password combinations
+> Be sure to update the Inventory to match your environments. Furthermore, feel free to update the variables to be more reflective of what you would like for your environment
 
 Sample usage:
 
 Nexus:
 ```YAML
-# ansible-playbook -i inventory nxos_plays.yml --list-tasks
-
-# ansible-playbook -i inventory nxos_plays.yml -v --tags "ping" --extra-vars "extra_host=10.66.88.1"
+# ansible-playbook -i NXOS_Inventory 6a-NXOS.yml
+# ansible-playbook -i NXOS_Inventory 6b-NXOS_Ping.yml
+# ansible-playbook -i NXOS_Inventory 6c-NXOS_Check_VLANs.yml
 ```
 
+All others:
 ```YAML
-Check on the Nexus 7000/3000/5000
-# ansible-playbook -i inventory nxos_plays.yml -v --tags "vlan_range" ### Default state is 'present' so will ensure existance
-# ansible-playbook -i inventory nxos_plays.yml -v --tags "vlan_range" --extra-vars "state=absent"   ### State absent will delete
-```
-
-ACI
-```YAML
-# ansible-playbook -i inventory aci_plays.yml --list-tasks
-```
-
-Default, will go to Fabric 3, looking for my Cisco Live Tenant
-```YAML
-# ansible-playbook -i inventory aci_plays.yml -v --tags "query_epgs"
-```
-
-Deploy APP
-```YAML
-# ansible-playbook -i inventory aci_plays.yml -v --tags "deploy_app" --extra-vars "group=aci_sim"
-```
-
-DELETE APP
-```YAML
-# ansible-playbook -i inventory aci_plays.yml -v --tags "deploy_app" --extra-vars "group=aci_sim" --extra-vars "state=absent"
+# ansible-playbook -i CiscoLive_Inventory <playbook_name>
 ```
 
 
