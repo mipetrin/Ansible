@@ -1,0 +1,69 @@
+---
+- name: Create VLAN pool and domain ///PHYSICAL DOMAIN
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+    vlanpool:
+      name: Physical_pool
+      start: 1001
+      end: 1100
+    domain:
+      name: Physical
+      type: phys
+    aep: AEP_common
+  tasks:
+  - name: TASK1 create VLAN pools
+    aci_encap_pool:
+      <<: *aci_login
+      pool: "{{ vlanpool.name }}"
+      pool_type: vlan
+      pool_allocation_mode: static
+      state: present
+
+  - name: TASK2 Add a VLAN range
+    aci_vlan_pool_encap_block:
+      <<: *aci_login
+      pool: "{{ vlanpool.name }}"
+      block_name: "{{ vlanpool.name }}"
+      pool_allocation_mode: static
+      block_start: "{{ vlanpool.start }}"
+      block_end: "{{ vlanpool.end }}"
+      state: present
+
+  - name: TASK3 Create a domain
+    aci_domain:
+      <<: *aci_login
+      domain: "{{ domain.name }}"
+      domain_type: "{{ domain.type }}"
+      state: present
+
+  - name: TASK4 Bind a domain to VLAN pool
+    aci_domain_to_vlan_pool:
+      <<: *aci_login
+      domain: "{{ domain.name }}"
+      domain_type: "{{ domain.type }}"
+      pool: "{{ vlanpool.name }}"
+      pool_allocation_mode: static
+      state: present
+
+  - name: TASK5 Create a new AEP
+    aci_aep:
+      <<: *aci_login
+      aep: "{{ aep }}"
+      state: present
+
+  - name: TASK6 Add AEP to domain binding
+    aci_aep_to_domain: &binding_present
+      <<: *aci_login
+      aep: "{{ aep }}"
+      domain: "{{ domain.name }}"
+      domain_type: "{{ domain.type }}"
+      state: present

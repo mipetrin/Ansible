@@ -1,0 +1,27 @@
+---
+- name: Basic Intro
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+    tenant: "CiscoLive-Basic"
+    vrf: VRF1
+
+  tasks:
+    - name: TASK 01 - Create Tenant
+      aci_tenant:
+        <<: *aci_login
+        tenant: "{{ tenant }}"
+
+    - name: TASK 02 - Create VRF
+      aci_vrf:
+        <<: *aci_login
+        tenant: "{{ tenant }}"
+        vrf: "{{ vrf }}"

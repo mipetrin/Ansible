@@ -1,0 +1,69 @@
+---
+- name: Create vzAny contract
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+
+    tenants:
+      - tenant: CiscoLive-1
+        vrf: VRF1
+        contract: Permit-All
+      - tenant: CiscoLive-2
+        vrf: VRF1
+        contract: Permit-All
+      - tenant: CiscoLive-3
+        vrf: VRF1
+        contract: Permit-ssh
+
+  tasks:
+    - name: TASK 01 - Create Test Tenants
+      aci_tenant:
+        <<: *aci_login
+        tenant: "{{ item.tenant }}"
+      with_items: "{{ tenants }}"
+
+    - name: TASK 02 - Create VRFs in Test Tenants
+      aci_vrf:
+        <<: *aci_login
+        tenant: "{{ item.tenant }}"
+        vrf: "{{ item.vrf }}"
+      with_items: "{{ tenants }}"
+
+    - name: TASK 03 - Contract to vzAny in multiple VRFs
+      aci_rest:
+        <<: *aci_login
+        method: post
+        path: /api/mo/uni/tn-{{ item.tenant }}/ctx-{{ item.vrf }}/any.json
+        content: |
+          {
+            "vzAny": {
+              "attributes": {
+                "matchT": "AtleastOne"
+              },
+              "children": [
+                {
+                  "vzRsAnyToProv": {
+                    "attributes": {
+                      "tnVzBrCPName": "{{ item.contract }}"
+                    }
+                  }
+                },
+                {
+                  "vzRsAnyToCons": {
+                    "attributes": {
+                      "tnVzBrCPName": "{{ item.contract }}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+      with_items: "{{ tenants }}"

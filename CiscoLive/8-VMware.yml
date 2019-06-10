@@ -1,0 +1,76 @@
+---
+- name: Add ESXi to DVS and Move vNIC
+  hosts: vcenter
+  gather_facts: False
+
+  vars:
+    ansible_python_interpreter: /Users/mipetrin/Scripts/CiscoLive/Ansible/Mike_Playbooks/venv/bin/python
+    vcenter_login: &vcenter_login
+      hostname: '{{ vcenter_host }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+
+  tasks:
+  - name: Add ESXi to DVS
+    vmware_dvs_host:
+      <<: *vcenter_login
+      esxi_hostname: 10.66.88.146
+      switch_name: ACI-vDS
+      vmnics:
+        - vmnic3
+        - vmnic4
+    delegate_to: localhost
+
+  - name: Move vNIC to different portgroup/EPG
+    vmware_guest:
+      <<: *vcenter_login
+      datacenter: mipetrin-dc
+      name: Web
+      folder: /CiscoLive
+      networks:
+        - name: CiscoLive|APP1|Web
+    delegate_to: localhost
+
+  - name: Create VM from template
+    vmware_guest:
+        <<: *vcenter_login
+        datacenter: "{{ datacenter }}"
+        cluster: "{{ cluster_01 }}"
+        template: "{{ vm_template_name }}"
+        name: "{{ inventory_hostname }}"
+        folder: "{{ vm_folder_name }}"
+        state: poweredoff
+        hardware:
+          memory_mb: "{{ vm_memory | default(4096) }}"
+          num_cpus: 2
+          scsi: paravirtual
+        disk:
+        - size_gb: 8
+          type: thin
+          datastore: "{{ datastore_name }}"
+        networks:
+        - name: "{{ network }}"
+          device_type: vmxnet3
+          type: "{{ ip_type }}"
+          ip: "{{ ip_address }}"
+          netmask: "{{ netmask }}"
+          gateway: "{{ ip_gateway }}"
+          domain: "{{ domain_name }}"
+          dns_servers:
+          - "{{ dns1 }}"
+        customization:
+          hostname: "{{ inventory_hostname }}"
+        wait_for_ip_address: yes
+    delegate_to: localhost
+
+  - name: Clone a VM
+    vmware_guest:
+      <<: *vcenter_login
+      datacenter: mipetrin-dc
+      #cluster: UCS-B
+      cluster: "10.66.88.46"
+      folder: /CiscoLive
+      name: CiscoLive-DB-Test
+      template: CentOS7-template
+    delegate_to: localhost

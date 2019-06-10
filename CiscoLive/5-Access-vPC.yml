@@ -1,0 +1,98 @@
+---
+- name: Create Interface and switch policies ///vPC Policies
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+    aep: AEP_common
+
+  tasks:
+  - name: TASK1 create an Interface Policy for LLDP
+    aci_interface_policy_lldp:
+      <<: *aci_login
+      lldp_policy: LLDP_Active
+      receive_state: yes
+      transmit_state: yes
+      state: present
+
+  - name: TASK2 create an Interface Policy for LACP
+    aci_interface_policy_port_channel:
+      <<: *aci_login
+      port_channel: LACP_Active
+      mode: active
+      state: present
+
+  - name: TASK3 Create leaf vPC Port Policy Groups
+    aci_interface_policy_leaf_policy_group:
+      <<: *aci_login
+      policy_group: "{{ item.grp }}"
+      lag_type: node
+      port_channel_policy: LACP_Active
+      aep: "{{ aep }}"
+      lldp_policy: LLDP_Active
+    with_items:
+      - grp: ucs-FI-A_PolGrp
+      - grp: ucs-FI-B_PolGrp
+
+  - name: TASK4 Create interface profile
+    aci_interface_policy_leaf_profile:
+      <<: *aci_login
+      leaf_interface_profile: ucs-FI-A-B-profile
+      state: present
+
+  - name: TASK5 Add interface selector
+    aci_access_port_to_interface_policy_leaf_profile:
+      <<: *aci_login
+      leaf_interface_profile: ucs-FI-A-B-profile
+      access_port_selector: "{{ item.profile }}"
+      leaf_port_blk: port_blk
+      from: "{{ item.from }}"
+      to: "{{ item.to }}"
+      policy_group: "{{ item.grp }}"
+      interface_type: vpc
+    with_items:
+      - profile: ucs-FI-A
+        grp: ucs-FI-A_PolGrp
+        from: 7
+        to: 7
+      - profile: ucs-FI-B
+        grp: ucs-FI-B_PolGrp
+        from: 8
+        to: 8
+
+  - name: TASK6 Create vPC Protection Group
+    aci_switch_policy_vpc_protection_group:
+      <<: *aci_login
+      protection_group: leafPair101-102
+      protection_group_id: 101
+      switch_1_id: 101
+      switch_2_id: 102
+
+  - name: TASK7 Create switch profile
+    aci_switch_policy_leaf_profile:
+      <<: *aci_login
+      leaf_profile: Switch101-102_Profile
+      state: present
+
+  - name: TASK8 Select Switches
+    aci_switch_leaf_selector:
+      <<: *aci_login
+      leaf_profile: Switch101-102_Profile
+      leaf: Switch101-102
+      leaf_node_blk: Switch101-102
+      from: 101
+      to: 102
+
+  - name: TASK9 Associate an interface selector profile to a switch policy leaf profile
+    aci_interface_selector_to_switch_policy_leaf_profile:
+      <<: *aci_login
+      leaf_profile: Switch101-102_Profile
+      interface_selector: ucs-FI-A-B-profile
+      state: present

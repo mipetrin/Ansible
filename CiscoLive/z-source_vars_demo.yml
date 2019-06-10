@@ -1,0 +1,177 @@
+---
+- name: Source Variable File
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+
+  tasks:
+    - name: TASK 1 - Pause if no --tags selected
+      pause:
+        seconds: 2
+      tags:
+        - pause_run
+
+    - name: TASK 6A - Load Variable file
+      include_vars:
+        file: ./vars/CiscoLive_Demo_App_vars.yml
+      tags:
+        - deploy_app
+
+    - name: TASK 6B - Create a new Tenant
+      aci_tenant:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        descr: "Cisco Live - Tenant created by Ansible"
+      tags:
+        - deploy_app
+
+    - name: TASK 6C - Create a new VRF
+      aci_vrf:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        vrf: "{{ vrf }}"
+        policy_control_preference: enforced
+        policy_control_direction: ingress
+        descr: "Cisco Live - VRF created by Ansible"
+      tags:
+        - deploy_app
+
+    - name: TASK 6D - Create Bridge Domain
+      aci_bd:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        bd: "{{ item.bd | default('mipetrin_bd') }}"
+        vrf: "{{ vrf }}"
+        description: "Cisco Live - BD created by Ansible"   ### Note description vs descr
+      with_items: "{{ bds }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6E - Configure Bridge Domain Subnet Information
+      aci_bd_subnet:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        bd: "{{ item.bd }}"
+        gateway: "{{ item.gateway }}"
+        mask: "{{ item.mask }}"
+        scope: "{{ item.scope }}"
+        descr: "Cisco Live - Subnet created by Ansible"
+      with_items: "{{ bds }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6F - Create the App
+      aci_ap:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        ap: "{{ ap }}"
+        descr: "Cisco Live - App created by Ansible"
+      tags:
+        - deploy_app
+
+    - name: TASK 6G - Create the EPGs to associate with App
+      aci_epg:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        ap: "{{ ap }}"
+        epg: "{{ item.epg }}"
+        bd: "{{ item.epg_bd }}"
+        fwd_control: proxy-arp
+        description: "Cisco Live - EPG created by Ansible" # Note description vs descr
+      with_items: "{{ ap_epgs }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6H - Create a Contract Filter
+      aci_filter:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        filter: "{{ item.filter }}"
+        descr: "Cisco Live - Filter created by Ansible"
+      with_items: "{{ filters }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6I - Create Filter Entries
+      aci_filter_entry:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        filter: "{{ item.filter }}"
+        entry: "{{ item.entry }}"
+        ether_type: "ip"
+        ip_protocol: "{{ item.protocol }}"
+        dst_port_start: "{{ item.port | default('unspecified')}}"  # Need to have a default for scenarios where port isn't required. Eg: ICMP
+        dst_port_end: "{{ item.port | default('unspecified')}}"  # Need to have a default for scenarios where port isn't required. Eg: ICMP
+        description: "Cisco Live - Filter Entry created by Ansible" # Note Description vs Descr
+      with_items: "{{ filters }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6J - Create a Contract
+      aci_contract:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        contract: "{{ item.contract }}"
+        scope: "context"
+        description: "Cisco Live - Contract created by Ansible"
+      with_items: "{{ contracts }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6K - Associate Contract with Subject   # aci_contract_subject must come BEFORE aci_contract_subject_to_filter
+      aci_contract_subject:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        contract: "{{ item.contract }}"
+        subject: "{{ item.subject }}"
+        description: "Cisco Live - Subject created by Ansible"   ## Note Description vs Descr
+      with_items: "{{ contracts }}"
+      tags:
+        - deploy_app
+
+
+    - name: TASK 6L - Associate Subject with Filter
+      aci_contract_subject_to_filter:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        contract: "{{ item.contract }}"
+        subject: "{{ item.subject }}"
+        filter: "{{ item.filter }}"
+      with_items: "{{ contracts }}"
+      tags:
+        - deploy_app
+
+    - name: TASK 6M - Associate Contracts with the EPG
+      aci_epg_to_contract:
+        <<: *aci_login
+        state: "{{ state | default('present')}}"
+        tenant: "{{ tenant }}"
+        ap: "{{ ap }}"
+        epg: "{{ item.epg }}"
+        contract: "{{ item.contract }}"
+        contract_type: "{{ item.contract_type }}"
+      with_items: "{{ epg_contracts }}"
+      tags:
+        - deploy_app
+
+### ansible-playbook -i TECACI2540_Inventory z-source_vars_demo.yml --tags "deploy_app"
+### ansible-playbook -i TECACI2540_Inventory z-source_vars_demo.yml --tags "deploy_app" --extra-vars "state=absent"

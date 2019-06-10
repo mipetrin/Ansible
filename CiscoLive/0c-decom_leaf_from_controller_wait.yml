@@ -1,0 +1,44 @@
+---
+- name: Decommission a Leaf from APIC
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+    node_id: 102
+    node_serial: "TEP-1-102"
+
+  tasks:
+  - name: remove leaf from controller
+    aci_rest:
+       <<: *aci_login
+       method: post
+       path: /api/node/mo/uni/fabric/outofsvc.json
+       content: |
+        {
+           "fabricRsDecommissionNode": {
+           "attributes": {
+              "tDn": "topology/pod-1/node-{{ node_id }}",
+              "status": "created,modified",
+              "removeFromController": "true"
+            },
+            "children": []
+          }
+        }
+
+  - name: wait for leaf to be removed
+    aci_rest:
+      <<: *aci_login
+      path: /api/node/class/fabricNode.json?query-target-filter=and(eq(fabricNode.serial,"{{ node_serial }}"))
+    register: leaf
+    until: "'totalCount' in leaf and leaf.totalCount|int >= 0"
+    retries: 120
+    delay: 30
+    delegate_to: localhost
+    run_once: yes

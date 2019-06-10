@@ -1,0 +1,74 @@
+---
+- name: Cert Install
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+
+  tasks:
+    - name: Add Ansible user
+      aci_aaa_user:
+        <<: *aci_login
+        aaa_user: ansible
+        clear_password_history: yes
+        aaa_password: ansible
+        expiration: never
+        expires: no
+        email: mipetrin@cisco.com
+        phone: 1-234-567-890
+        first_name: Michael
+        last_name: Petrinovic
+        state: present
+
+    # openssl req -new -newkey rsa:1024 -days 36500 -nodes -x509 -keyout ansible.key -out ansible.crt -subj '/CN=Ansible /O=Cisco Systems/C=US'
+    - name: Install cert to local Ansible user
+      aci_aaa_user_certificate:
+        <<: *aci_login
+        aaa_user: ansible
+        certificate_name: ansible
+        certificate: "{{ lookup('file', 'ansible.crt') }}"
+        validate_certs: no
+
+    - name: Modify "Ansible" user to include Admin priv (r/w) to entire Fabric
+      aci_rest:
+        <<: *aci_login
+        method: post
+        path: /api/mo/uni/userext/user-ansible/userdomain-all.json
+        content: |
+          {
+              "aaaUserDomain": {
+                  "attributes": {
+                      "dn": "uni/userext/user-ansible/userdomain-all",
+                      "name": "all",
+                      "rn": "userdomain-all",
+                      "status": "created,modified"
+                  },
+                  "children": [{
+                      "aaaUserRole": {
+                          "attributes": {
+                              "dn": "uni/userext/user-ansible/userdomain-all/role-admin",
+                              "name": "admin",
+                              "privType": "writePriv",
+                              "rn": "role-admin",
+                              "status": "created,modified"
+                          }
+                      }
+                  }]
+              }
+          }
+
+    - name: Test new Tenant with private_key auth
+      aci_tenant:
+        hostname: '{{ apic_host }}'
+        username: ansible
+        private_key: ansible.key
+        validate_certs: no
+        tenant: "CiscoLive-Private-Key"
+        description: "Tenant created via Ansible using a Private Key"

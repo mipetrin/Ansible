@@ -1,0 +1,11 @@
+---
+all:
+  hosts:
+    apic:
+      apic_host: "10.66.88.118"
+      apic_password: admincisco
+      apic_username: admin
+    vcenter:
+      vcenter_host: "10.66.80.27"
+      vcenter_password: admincisco
+      vcenter_username: ansible@mike.local

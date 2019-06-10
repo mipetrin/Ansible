@@ -1,0 +1,65 @@
+# Inventory
+all:
+  hosts:
+    TECACI2540-SP01:
+      sp_template: ESXi-Nimble
+      slot: sys/chassis-1/blade-3
+
+  vars:
+    ucs_host: 10.48.22.82
+    ucs_username: admin
+    ucs_password: ins3965!
+
+sps:
+  hosts:
+    TECACI2540-SP01:
+
+# Playbook
+---
+- name: Create new service profile
+  hosts: sps
+  gather_facts: no
+  connection: local
+
+  tasks:
+  - name: Configure SP from template:
+      ucs_service_profile_from_template:
+        hostname: "{{ ucs_host }}"
+        username: "{{ ucs_username }}"
+        password: "{{ ucs_password }}"
+        name: "{{ inventory_hostname }}"
+        source_template: "{{ sp_template }}"
+
+  - name: Reconfigure IMC and start PXE boot
+      imc_rest:
+        hostname: '{{ cimc_host }}'
+        username: '{{ cimc_username }}'
+        password: '{{ cimc_password }}'
+        validate_certs: no
+        timeout: 120
+        content: |
+          <!-- Power down server -->
+          <configConfMo><inConfig>
+            <computeRackUnit dn="sys/rack-unit-1" adminPower="down" usrLbl="ACI Lab - POD{{ pod_id }} - {{ inventory_hostname_short }}"/>
+          </inConfig></configConfMo>
+
+          <!-- Configure Serial-on-LAN -->
+          <configConfMo><inConfig>
+            <solIf dn="sys/rack-unit-1/sol-if" adminState="enable" speed="115200" comport="com0"/>
+          </inConfig></configConfMo>
+
+          <!-- Configure Console Redirection -->
+          <configConfMo><inConfig>
+            <biosVfConsoleRedirection dn="sys/rack-unit-1/bios/bios-settings/Console-redirection" vpBaudRate="115200" vpConsoleRedirection="com-0" vpFlowControl="none" vpTerminalType="vt100" vpPuttyKeyPad="LINUX" vpRedirectionAfterPOST="Always Enable"/>
+          </inConfig></configConfMo>
+
+          <!-- Configure PXE boot -->
+          <configConfMo><inConfig>
+            <lsbootLan dn="sys/rack-unit-1/boot-policy/lan-read-only" access="read-only" order="1" prot="pxe" type="lan"/>
+          </inConfig></configConfMo>
+
+          <!-- Power up server -->
+          <configConfMo><inConfig>
+            <computeRackUnit dn="sys/rack-unit-1" adminPower="up"/>
+          </inConfig></configConfMo>
+      delegate_to: localhost

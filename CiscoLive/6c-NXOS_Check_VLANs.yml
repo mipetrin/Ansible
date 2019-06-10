@@ -1,0 +1,29 @@
+---
+- name: Mike's NXOS Playbook
+  hosts: nxos
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Ensure a range of VLANs are not present on the switch
+      nxos_vlan:
+        host: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        vlan_range: "627-630"
+        state: "{{ state | default('present')}}"
+        transport: nxapi
+      tags:
+        - vlan_range
+        # ansible-playbook -i inventory nxos_plays.yml -v --tags "vlan_range" ### Default state is 'present' so will ensure existance
+        # ansible-playbook -i inventory nxos_plays.yml -v --tags "vlan_range" --extra-vars "state=absent"   ### State absent will delete
+
+
+# Remove VLANs just from the Group of N3K hosts
+# ansible-playbook -i NXOS_Inventory 6c-NXOS_Check_VLANs.yml --tags "vlan_range" -l n3k --extra-vars "state=absent" -v
+
+# Run against all NXOS hosts
+# ansible-playbook -i NXOS_Inventory 6c-NXOS_Check_VLANs.yml --tags "vlan_range" -v
+
+# Command to check on Nexus device
+# NXOS check:   #show vlan bri | egrep ^6[2-3][6-9]|^630

@@ -1,0 +1,69 @@
+---
+- name: Obtain Info about a VM and create a clone
+  hosts: vcenter
+  connection: local
+  gather_facts: no
+
+  vars:
+    ansible_python_interpreter: /Users/mipetrin/Scripts/CiscoLive/Ansible/Mike_Playbooks/venv/bin/python
+    vcenter_login: &vcenter_login
+      hostname: '{{ vcenter_host }}'
+      username: '{{ vcenter_username }}'
+      password: '{{ vcenter_password }}'
+      validate_certs: no
+
+  tasks:
+  - name: Clone a VM
+    vmware_guest:
+      <<: *vcenter_login
+      datacenter: mipetrin-dc
+      #cluster: UCS-B
+      cluster: "10.66.88.46"
+      folder: /CiscoLive
+      name: CiscoLive-Centos-Clone
+      template: CentOS7-template
+    delegate_to: localhost
+
+  - name:  Customize VM
+    vmware_guest:
+      <<: *vcenter_login
+      datacenter: mipetrin-dc
+      #cluster: UCS-B
+      cluster: "10.66.88.46"
+      folder: /CiscoLive
+      name: CiscoLive-Centos-Clone
+      state: present
+      networks:
+        - name: Ansible_Test_Net
+          ip: 192.168.10.11
+          netmask: 255.255.255.0
+      customization:
+        domain: "mike.local"
+        dns_servers:
+          - 8.9.9.9
+          - 7.8.8.9
+        dns_suffix:
+          - example.com
+          - example2.com
+    delegate_to: localhost
+
+  - name: Power On virtual machine
+    vmware_guest:
+      <<: *vcenter_login
+      datacenter: mipetrin-dc
+      cluster: "10.66.88.46"
+      name: CiscoLive-Centos-Clone
+      state: poweredon
+    delegate_to: localhost
+
+  - name: get vm info
+    vmware_guest_facts:
+      <<: *vcenter_login
+      datacenter: mipetrin-dc
+      validate_certs: no
+      name: CiscoLive-Centos-Clone
+    register: facts
+
+  - name: Print VM Info
+    debug:
+      msg: "{{ facts }}"

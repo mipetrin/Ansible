@@ -1,0 +1,53 @@
+# Inventory
+all:
+  hosts:
+    bdsol-aci12-n3k:
+      ansible_host: 10.48.22.79
+      ansible_user: admin
+      ansible_connection: httpapi
+      ansible_network_os: nxos
+
+# Playbook
+---
+- name: My first playbook
+  hosts: bdsol-aci12-n3k
+  gather_facts: no
+
+  tasks:
+  - name: Enable NX-API
+    nxos_nxapi:
+      enable_http: yes
+      enable_https: yes
+    vars:
+      ansible_connection: network_cli
+      ansible_network_os: nxos
+
+ - name: Create VRF
+    nxos_vrf:
+      vrf: Michael
+
+  - name: Create VLAN interface
+    nxos_interface:
+      name: vlan42
+      admin_state: up
+      mode: layer3
+
+  - name: Put VLAN interface in VRF
+    nxos_vrf_interface:
+      interface:  vlan42
+      vrf: Michael
+
+ - name: Put IP on VLAN interface
+    nxos_l3_interface:
+      name: vlan42
+      ipv4:  42.42.42.1/24
+
+  - name: Activate switchport with VLANs
+    nxos_switchport:
+      interface: Eth1/48
+      mode: trunk
+      trunk_allowed_vlans: 42
+
+
+
+

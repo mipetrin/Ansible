@@ -1,0 +1,60 @@
+---
+- name: APIC Simulator Setup
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+    nodes:
+      - switch_name: "Leaf101"
+        node_id: 101
+        serial: "TEP-1-101"
+        role: "leaf"
+      - switch_name: "Spine201"
+        node_id: 201
+        serial: "TEP-1-103"
+        role: "spine"
+      - switch_name: "Leaf102"
+        node_id: 102
+        serial: "TEP-1-102"
+        role: "leaf"
+
+  tasks:
+
+  - name: register new SN as new leaf
+    aci_rest:
+       <<: *aci_login
+       method: post
+       path: /api/node/mo/uni/controller/nodeidentpol.json
+       content: |
+        {
+          "fabricNodeIdentP": {
+            "attributes": {
+              "dn": "uni/controller/nodeidentpol/nodep-{{ item.serial }}",
+              "serial": "{{ item.serial }}",
+              "nodeId": "{{ item.node_id }}",
+              "name": "{{ item.switch_name }}",
+              "status": "created,modified"
+            },
+            "children": []
+          }
+        }
+    with_items: "{{ nodes }}"
+
+  - name: Wait for leaf to become ready
+    aci_rest:
+      <<: *aci_login
+      path: /api/node/class/fabricNode.json?query-target-filter=and(eq(fabricNode.serial,"{{ item.serial }}"))
+    register: leaf
+    until: "'totalCount' in leaf and leaf.totalCount|int >= 1 and leaf.imdata[0].fabricNode.attributes.fabricSt == 'active'"
+    retries: 10
+    delay: 30
+    delegate_to: localhost
+    run_once: yes
+    with_items: "{{ nodes }}"

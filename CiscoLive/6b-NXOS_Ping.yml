@@ -1,0 +1,20 @@
+---
+- name: Mike's NXOS Playbook
+  hosts: nxos
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Test reachability to a few different known IPs using mgmt vrf
+      nxos_ping:
+        dest: "{{ item }}"
+        vrf: "{{ vrf }}"
+        count: 3
+        host: "{{ inventory_hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+      with_items:
+        #- 10.66.80.242
+        - 4.2.2.2
+        - 10.66.80.4
+        - 10.66.88.1

@@ -1,0 +1,36 @@
+---
+- name: Get query
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+
+  tasks:
+  - name: Obtain APIC Firmware version
+    aci_rest:
+      <<: *aci_login
+      method: get
+      path: /api/node/class/firmwareCtrlrRunning.json
+    register: apic_firmware
+
+  - name: print Version
+    debug:
+      msg: "APIC Version: {{ apic_firmware.imdata[0].firmwareCtrlrRunning.attributes.version }}"
+
+  - name: Obtain info about APICs
+    aci_rest:
+      <<: *aci_login
+      method: get
+      path: /api/node/class/topSystem.json?query-target-filter=eq(topSystem.role,"controller")
+    register: topsystem
+
+  - name: print APIC Cluster
+    debug:
+      msg: "{{topsystem}}"

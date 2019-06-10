@@ -1,0 +1,13 @@
+[n7k]
+10.66.88.233 username=admin password=admincisco vrf=management # N7K
+
+[n5k]
+10.66.65.154 username=admin password=admincisco vrf=default
+
+[n3k]
+10.66.88.110 username=admin password=admincisco vrf=management # N3K
+
+[nxos:children]
+n7k
+n5k
+n3k

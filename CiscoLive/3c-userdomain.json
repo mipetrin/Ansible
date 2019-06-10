@@ -1,0 +1,22 @@
+{
+    "aaaUserDomain": {
+        "attributes": {
+            "dn": "uni/userext/user-ansible/userdomain-all",
+            "name": "all",
+            "rn": "userdomain-all",
+            "status": "created,modified"
+        },
+        "children": [{
+            "aaaUserRole": {
+                "attributes": {
+                    "dn": "uni/userext/user-ansible/userdomain-all/role-admin",
+                    "name": "admin",
+                    "privType": "writePriv",
+                    "rn": "role-admin",
+                    "status": "created,modified"
+                },
+                "children": []
+            }
+        }]
+    }
+}

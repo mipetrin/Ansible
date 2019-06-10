@@ -1,0 +1,66 @@
+---
+- name: Configure Remote FTP Location and take a backup
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  vars:
+    aci_login: &aci_login
+      hostname: '{{ apic_host }}'
+      username: '{{ apic_username }}'
+      password: '{{ apic_password }}'
+      use_proxy: no
+      validate_certs: no
+
+  tasks:
+  - name: create remote location
+    aci_rest:
+      <<: *aci_login
+      method: post
+      path: /api/node/mo/uni/fabric.json
+      content: |
+        {
+            "fileRemotePath": {
+                "attributes": {
+                    "dn": "uni/fabric/path-Mike-FTP",
+                    "remotePort": "21",
+                    "name": "Mike-FTP",
+                    "host": "10.66.80.34",
+                    "protocol": "ftp",
+                    "remotePath": "/Backup",
+                    "userName": "mike",
+                    "userPasswd": "admincisco",
+                    "rn": "path-Mike-FTP",
+                    "status": "created,modified"
+                },
+                "children": []
+            }
+        }
+
+  - name: Create a backup
+    aci_rest:
+      <<: *aci_login
+      method: post
+      path: /api/node/mo/uni/fabric.json
+      content: |
+        {
+            "configExportP": {
+                "attributes": {
+                    "dn": "uni/fabric/configexp-Mike-Backup",
+                    "name": "Mike-Backup",
+                    "adminSt": "triggered",
+                    "status": "created,modified"
+                },
+                "children": [
+                    {
+                        "configRsRemotePath": {
+                            "attributes": {
+                                "tnFileRemotePathName": "Mike-FTP",
+                                "status": "created,modified"
+                            },
+                            "children": []
+                        }
+                    }
+                ]
+            }
+        }
