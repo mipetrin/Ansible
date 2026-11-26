@@ -6,9 +6,9 @@ all:
       slot: sys/chassis-1/blade-3
 
   vars:
-    ucs_host: 10.48.22.82
-    ucs_username: admin
-    ucs_password: ins3965!
+    ucs_host: "IP Address"
+    ucs_username: "username"
+    ucs_password: "password"
 
 sps:
   hosts:
